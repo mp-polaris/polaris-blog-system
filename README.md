@@ -14,8 +14,17 @@ Spring Boot 初学者，初学者可以结合该项目学习。项目中都有�
 - 分页插件：PageHelper
 - 缓存框架：Redis
 - Token：JWT
+- 搜索引擎：Solr
+- Web容器：Tomcat
 
 ##### 前端
+- 核心框架：Vue.js
+- 服务器渲端染：Nuxt.js
+- 状态管理：Vuex
+- 异步请求工具：Axios
+- 布局：Element-UI
+
+##### 注
 - 正在开发中,不久将推送博客系统前台与门户的项目
 - 后台API接口可通过Swagger-UI查看接口文档
 - 预览：http://mpolaris.top:8080/swagger-ui.html

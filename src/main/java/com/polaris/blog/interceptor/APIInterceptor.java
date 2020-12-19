@@ -42,7 +42,7 @@ public class APIInterceptor extends HandlerInterceptorAdapter {
             //从redis里获取，判断是否存在
             String hasCommit = (String)redisUtil.get(Constants.User.KEY_COMMIT_TOKEN_RECORD + tokenKey + methodName);
             if(!TextUtil.isEmpty(hasCommit)){
-                //如果存在则返回"提交太频繁"
+                //如果存在则返回"提交太频繁 "
                 response.setCharacterEncoding("UTF-8");
                 response.setContentType("application/json");
                 ResponseResult failed = ResponseResult.FAILED("提交过于频繁，请稍后重试");

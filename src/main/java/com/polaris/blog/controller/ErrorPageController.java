@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 错误码转统一的返回结果
+ * 错误码转统一的返回结果.
  */
 @RestController
 public class ErrorPageController {

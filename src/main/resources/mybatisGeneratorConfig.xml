@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE generatorConfiguration
+        PUBLIC "-//mybatis.org//DTD MyBatis Generator Configuration 1.0//EN"
+        "http://mybatis.org/dtd/mybatis-generator-config_1_0.dtd">
+
+<generatorConfiguration>
+    <!-- targetRuntime：
+        MyBatis3：生成复杂的全面的CRUD，生成的Java对象
+            支持许多JSE 5.0功能，包括参数化类型和注释
+        MyBatis3Simple：生成一个基础的CRUD	 -->
+    <context id="myTest" targetRuntime="MyBatis3Simple">
+        <!-- jdbcConnection：指导连接到哪个数据库  -->
+        <jdbcConnection
+                driverClass="com.mysql.cj.jdbc.Driver"
+                connectionURL="jdbc:mysql://218.244.138.206:3306/mpolaris_blog_system"
+                userId="root"
+                password="1234321" />
+
+        <!-- javaModelGenerator：生成pojo
+            targetPackage：生成的pojo所放的包
+            targetProject：放在哪个工程的哪个目录下
+        -->
+        <javaModelGenerator
+                targetPackage="com.polaris.blog.pojo"
+                targetProject=".\src\main\java">
+            <property name="enableSubPackages" value="true"/>
+            <property name="trimStrings" value="true"/>
+        </javaModelGenerator>
+
+        <!-- sqlMapGenerator：生成映射文件	-->
+        <sqlMapGenerator
+                targetPackage="mapper"
+                targetProject=".\src\main\resources\mybatis">
+            <property name="enableSubPackages" value="true"/><!--如果包不存在创建一个  -->
+        </sqlMapGenerator>
+
+        <!-- javaClientGenerator：生成Dao接口	  -->
+        <javaClientGenerator
+                targetPackage="com.polaris.blog.dao"
+                type="XMLMAPPER"
+                targetProject=".\src\main\java">
+            <property name="enableSubPackages" value="true"/>
+        </javaClientGenerator>
+
+        <!-- table:我要生成的表  可以一次性生成多张表
+            tableName：表名
+            domainObjectName：实体名
+         -->
+<!--        <table tableName="tb_user" domainObjectName="BlogUser"/>-->
+<!--        <table tableName="tb_image" domainObjectName="Image"/>-->
+<!--        <table tableName="tb_category" domainObjectName="Category"/>-->
+        <table tableName="tb_article" domainObjectName="Article">
+            <columnOverride column="content" jdbcType="VARCHAR"/>
+            <columnOverride column="summary" jdbcType="VARCHAR"/>
+        </table>
+<!--        <table tableName="tb_comment" domainObjectName="Comment">-->
+<!--            <columnOverride column="parent_content" jdbcType="VARCHAR"/>-->
+<!--            <columnOverride column="content" jdbcType="VARCHAR"/>-->
+<!--        </table>-->
+<!--        <table tableName="tb_looper" domainObjectName="Looper"/>-->
+<!--        <table tableName="tb_daily_view_count" domainObjectName="DailyViewCount"/>-->
+<!--        <table tableName="tb_label" domainObjectName="Label"/>-->
+<!--        <table tableName="tb_friend_link" domainObjectName="FriendLink"/>-->
+<!--        <table tableName="tb_setting" domainObjectName="Setting"/>-->
+<!--        <table tableName="tb_refresh_token" domainObjectName="RefreshToken">-->
+<!--            <columnOverride column="refresh_token" jdbcType="VARCHAR"/>-->
+<!--        </table>-->
+    </context>
+</generatorConfiguration>

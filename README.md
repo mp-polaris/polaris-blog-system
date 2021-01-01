@@ -30,9 +30,9 @@ Spring Boot 初学者，初学者可以结合该项目学习。项目中都有�
 
 - 项目地址：[Polaris博客管理中心项目地址](https://github.com/mp-polaris/polaris-blog-admin)
 
-- [Polaris博客管理中心预览](http://www.mpolaris.top)
+- [Polaris博客管理中心](http://mp.mpolaris.top)
 
-- [Polaris博客门户预览](http://mp.mpolaris.top)
+- [Polaris博客门户](http://www.mpolaris.top)
 
 > 用户名：mpolaris     密码：1234321
 

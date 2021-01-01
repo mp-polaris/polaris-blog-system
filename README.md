@@ -26,15 +26,15 @@ Spring Boot 初学者，初学者可以结合该项目学习。项目中都有�
 
 ##### 后端接口API：[Polaris博客后端Swagger-UI](http://mpolaris.top:8080/swagger-ui.html)
 
-##### 注：前端管理中心已完成 
+##### 注：前端管理中心与门户已完成 
 
 - 项目地址：[Polaris博客管理中心项目地址](https://github.com/mp-polaris/polaris-blog-admin)
 
-- 概览：[Polaris博客管理中心预览](http://mpolaris.top)
+- [Polaris博客管理中心预览](http://www.mpolaris.top)
 
-> 用户名：mpolaris     密码：12345
+- [Polaris博客门户预览](http://mp.mpolaris.top)
 
-##### 前端门户正在开发中...
+> 用户名：mpolaris     密码：1234321
 
 ## 功能说明
 

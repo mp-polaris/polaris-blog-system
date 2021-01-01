@@ -1,20 +1,20 @@
 # 自定义配置，通过@value读取
-# 我们使用的是docker来部署项目，这里的路径应该是docker内部的路径
-# 我们可以将docker内部的路径映射到宿主机的/root/docker/polaris_blog/upload目录
-polaris.blog.image.save-path: /usr/app/upload
+# 如果我们使用的是docker来部署项目，这里的路径应该是docker内部的路径，我们可以将docker内部的路径映射到
+# 宿主机的/root/docker/polaris_blog/upload目录
+polaris.blog.image.save-path: /root/polaris_blog/upload
 polaris.blog.image.max-size: 2097152 #1024*1024*2
 # 控制Swagger的开关
 polaris.blog.swagger.enable: true
 server:
-  port: 8085
+  port: 8080
 spring:
   servlet:
     multipart:
       max-file-size: 50MB
   datasource:
     username: root
-    password:
-    url: jdbc:mysql://mpolaris.top:3306/mpolaris_blog_system?characterEncoding=utf-8&useSSL=false
+    password: 1234321
+    url: jdbc:mysql://172.20.147.156:3306/mpolaris_blog_system?characterEncoding=utf-8&useSSL=false
     driver-class-name: com.mysql.cj.jdbc.Driver
     initialization-mode: always
     type: com.alibaba.druid.pool.DruidDataSource
@@ -34,13 +34,13 @@ spring:
     useGlobalDataSourceStat: true
     connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=500
   redis:
-    host: mpolaris.top
+    host: 172.20.147.156
     port: 6379
-    password:
+    password: 1234321
     database: 1
   data:
     solr:
-      host: http://mpolaris.top:8983/solr/mpolaris_blog_system_core
+      host: http://172.20.147.156:8983/solr/mpolaris_blog_system_core
 mybatis:
   mapper-locations: classpath:mybatis/mapper/*.xml
   configuration:

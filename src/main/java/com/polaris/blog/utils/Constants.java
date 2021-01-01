@@ -32,6 +32,7 @@ public interface Constants {
         int QR_CODE_STATE_CHECK_WAITING_TIME = 30;
 
         String LAST_REQUEST_LOGIN_ID = "l_r_l_i";
+        String LAST_CAPTCHA_ID = "l_c_i";
     }
 
     interface  Setting{

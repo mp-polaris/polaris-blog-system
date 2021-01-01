@@ -1,11 +1,13 @@
 package com.polaris.blog.services.impl;
 
+import com.polaris.blog.dao.ArticleMapper;
 import com.polaris.blog.pojo.Article;
 import com.polaris.blog.pojo.PageList;
 import com.polaris.blog.pojo.SearchResult;
 import com.polaris.blog.response.ResponseResult;
 import com.polaris.blog.services.SearchService;
 import com.polaris.blog.utils.Constants;
+import com.polaris.blog.utils.MapperUtil;
 import com.polaris.blog.utils.TextUtil;
 import com.vladsch.flexmark.ext.jekyll.tag.JekyllTagExtension;
 import com.vladsch.flexmark.ext.tables.TablesExtension;
@@ -31,15 +33,68 @@ import java.util.Map;
 
 /**
  * 搜索内容crud时机：
- *      搜索内容添加：文章发表的时候，即状态变为1的时候
- *      搜索内容删除：文章删除的时候，包括物理删除和修改状态删除
- *      文章内容更新：当文章阅读量更新时才更新
+ * 搜索内容添加：文章发表的时候，即状态变为1的时候
+ * 搜索内容删除：文章删除的时候，包括物理删除和修改状态删除
+ * 文章内容更新：当文章阅读量更新时才更新
  */
 @Service
 @Transactional
 public class SearchServiceImpl extends BaseService implements SearchService {
     @Autowired
     private SolrClient solrClient;
+
+    /**
+     * 将MySQL中的文章表内容全部导入到Solr中
+     * 两个知识点：MarkDown转html，富文本转纯文本
+     */
+    public void importAllArticleToSolr() {
+        try {
+            List<Article> articles = MapperUtil.getMapper(ArticleMapper.class).selectAll();
+            for (Article article : articles) {
+                if (Constants.Article.STATE_DRAFT.equals(article.getState()) ||
+                        Constants.Article.STATE_DELETE.equals(article.getState())) {
+                    continue;
+                }
+                SolrInputDocument doc = new SolrInputDocument();
+                doc.addField("id", article.getId());
+                doc.addField("blog_view_count", article.getViewCount());
+                doc.addField("blog_title", article.getTitle());
+                //对内容进行处理，去掉标签，提取出纯文本
+                //① markdown内容 ==> type = 1
+                //② 富文本内容 => type = 0
+                //=> 如果type = 1，需要先转成html，再从html转为纯文字
+                //   如果 type = 0，要转为纯文本(C
+                String type = article.getType();
+                String html = null;
+                if (Constants.Article.TYPE_MARKDOWN.equals(type)) {
+                    //转成html
+                    MutableDataSet options = new MutableDataSet().set(Parser.EXTENSIONS, Arrays.asList(
+                            TablesExtension.create(),
+                            JekyllTagExtension.create(),
+                            TocExtension.create(),
+                            SimTocExtension.create()
+                    ));
+                    Parser parser = Parser.builder(options).build();
+                    HtmlRenderer renderer = HtmlRenderer.builder(options).build();
+                    Node document = parser.parse(article.getContent());
+                    html = renderer.render(document);
+                } else {
+                    html = article.getContent();
+                }
+                //到这里都是html了
+                String text = Jsoup.parse(html).text();
+                doc.addField("blog_content", text);
+                doc.addField("blog_create_time", article.getCreateTime());
+                doc.addField("blog_labels", article.getLabels());
+                doc.addField("blog_url", "/article/" + article.getId());
+                doc.addField("blog_category_id", article.getCategoryId());
+                solrClient.add(doc);
+                solrClient.commit();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
     @Override
     public ResponseResult doSearch(String keyword, int page, int size, String categoryId, Integer sort) {
@@ -56,28 +111,28 @@ public class SearchServiceImpl extends BaseService implements SearchService {
         solrQuery.setStart(start);//也可以换种写法：solrQuery.set("start",start);
         //3.设置搜索条件
         // ① 关键字
-        solrQuery.set("df","search_item");
+        solrQuery.set("df", "search_item");
         // ② 条件过滤
         if (TextUtil.isEmpty(keyword)) {
-            solrQuery.set("q","*");
+            solrQuery.set("q", "*");
         } else {
-            solrQuery.set("q",keyword);
+            solrQuery.set("q", keyword);
         }
         // ③ 排序
         //   4-case: 时间的升序（1）降序（2），浏览量的升序（3）降序（4）
         if (sort != null) {
             switch (sort) {
-                case 1 :
-                    solrQuery.setSort("blog_create_time",SolrQuery.ORDER.asc);
+                case 1:
+                    solrQuery.setSort("blog_create_time", SolrQuery.ORDER.asc);
                     break;
-                case 2 :
-                    solrQuery.setSort("blog_create_time",SolrQuery.ORDER.desc);
+                case 2:
+                    solrQuery.setSort("blog_create_time", SolrQuery.ORDER.desc);
                     break;
-                case 3 :
-                    solrQuery.setSort("blog_view_count",SolrQuery.ORDER.asc);
+                case 3:
+                    solrQuery.setSort("blog_view_count", SolrQuery.ORDER.asc);
                     break;
-                case 4 :
-                    solrQuery.setSort("blog_view_count",SolrQuery.ORDER.desc);
+                case 4:
+                    solrQuery.setSort("blog_view_count", SolrQuery.ORDER.desc);
                     break;
             }
         }
@@ -88,7 +143,7 @@ public class SearchServiceImpl extends BaseService implements SearchService {
         // ⑤ 关键字高亮
         solrQuery.setHighlight(true);
         solrQuery.addHighlightField("blog_title,blog_content");
-        solrQuery.setHighlightSimplePre("<font color='red>");
+        solrQuery.setHighlightSimplePre("<font color='red'>");
         solrQuery.setHighlightSimplePost("</font>");
         solrQuery.setHighlightFragsize(500);//设置size，否则会截取很少内容
         // ⑥ 设置返回字段
@@ -114,7 +169,7 @@ public class SearchServiceImpl extends BaseService implements SearchService {
             }
             //5.返回搜索结果
             long numFound = result.getResults().getNumFound();//获取总记录数
-            PageList<SearchResult> pageList = new PageList<>(page,size,numFound);
+            PageList<SearchResult> pageList = new PageList<>(page, size, numFound);
             pageList.setContents(resultList);
             return ResponseResult.FAILED("搜索成功").setData(pageList);
         } catch (Exception e) {
@@ -128,11 +183,11 @@ public class SearchServiceImpl extends BaseService implements SearchService {
      * @param article
      */
     @Override
-    public void addArticle(Article article){
+    public void addArticle(Article article) {
         SolrInputDocument doc = new SolrInputDocument();
-        doc.addField("id",article.getId());
-        doc.addField("blog_view_count",article.getViewCount());
-        doc.addField("blog_title",article.getTitle());
+        doc.addField("id", article.getId());
+        doc.addField("blog_view_count", article.getViewCount());
+        doc.addField("blog_title", article.getTitle());
         //对内容进行处理，去掉标签，提取出纯文本
         //① markdown内容 ==> type = 1
         //② 富文本内容 => type = 0
@@ -150,18 +205,18 @@ public class SearchServiceImpl extends BaseService implements SearchService {
             ));
             Parser parser = Parser.builder(options).build();
             HtmlRenderer renderer = HtmlRenderer.builder(options).build();
-            Node document =  parser.parse(article.getContent());
+            Node document = parser.parse(article.getContent());
             html = renderer.render(document);
         } else {
             html = article.getContent();
         }
         //到这里都是html了
         String text = Jsoup.parse(html).text();
-        doc.addField("blog_content",text);
-        doc.addField("blog_create_time",article.getCreateTime());
-        doc.addField("blog_labels",article.getLabels());
-        doc.addField("blog_url","www.baidu.com");
-        doc.addField("blog_category_id",article.getCategoryId());
+        doc.addField("blog_content", text);
+        doc.addField("blog_create_time", article.getCreateTime());
+        doc.addField("blog_labels", article.getLabels());
+        doc.addField("blog_url", "/article/" + article.getId());
+        doc.addField("blog_category_id", article.getCategoryId());
         try {
             solrClient.add(doc);
             solrClient.commit();
@@ -184,7 +239,7 @@ public class SearchServiceImpl extends BaseService implements SearchService {
     }
 
     @Override
-    public void updateArticle(String articleId,Article article) {
+    public void updateArticle(String articleId, Article article) {
         article.setId(articleId);
         this.addArticle(article);
     }

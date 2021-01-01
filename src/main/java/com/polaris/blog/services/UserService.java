@@ -6,13 +6,13 @@ import com.polaris.blog.response.ResponseResult;
 public interface UserService {
     ResponseResult initManagerAccount(BlogUser blogUser);
 
-    void createCaptcha(String captchaKey);
+    void createCaptcha();
 
     ResponseResult sendEmail(String type, String emailAddress);
 
-    ResponseResult register(BlogUser blogUser, String emailCode, String captchaCode, String captchaKey);
+    ResponseResult register(BlogUser blogUser, String emailCode, String captchaCode);
 
-    ResponseResult doLogin(String captchaKey, String captcha, BlogUser blogUser, String from);
+    ResponseResult doLogin(String captcha, BlogUser blogUser, String from);
 
     BlogUser checkBlogUser();
 
@@ -44,6 +44,8 @@ public interface UserService {
     ResponseResult updateQrCodeLoginState(String qrCode);
 
     ResponseResult parseToken();
+
+    ResponseResult checkEmailCode(String email, String emailCode, String captchaCode);
 
     ResponseResult registerCount();
 }

@@ -33,12 +33,11 @@ public class UserAPI {
     /**
      * 获取图灵验证码
      *
-     * @param captchaKey
      * @return
      */
     @GetMapping("/captcha")
-    public void getCaptcha(@RequestParam("captcha_key") String captchaKey) {
-        userService.createCaptcha(captchaKey);
+    public void getCaptcha() {
+        userService.createCaptcha();
     }
 
     /**
@@ -67,25 +66,22 @@ public class UserAPI {
     @PostMapping("/register")
     public ResponseResult register(@RequestBody BlogUser blogUser,
                                    @RequestParam("email_code") String emailCode,
-                                   @RequestParam("captcha_code") String captchaCode,
-                                   @RequestParam("captcha_key") String captchaKey) {
-        return userService.register(blogUser, emailCode, captchaCode, captchaKey);
+                                   @RequestParam("captcha_code") String captchaCode) {
+        return userService.register(blogUser, emailCode, captchaCode);
     }
 
     /**
      * 登录
      *
-     * @param captchaKey
      * @param captcha
      * @param blogUser
      * @return
      */
-    @PostMapping("/login/{captcha_key}/{captcha}")
-    public ResponseResult login(@PathVariable("captcha_key") String captchaKey,
-                                @PathVariable("captcha") String captcha,
+    @PostMapping("/login/{captcha}")
+    public ResponseResult login(@PathVariable("captcha") String captcha,
                                 @RequestBody BlogUser blogUser,
                                 @RequestParam(value = "from", required = false) String from) {
-        return userService.doLogin(captchaKey, captcha, blogUser, from);
+        return userService.doLogin(captcha, blogUser, from);
     }
 
     /**
@@ -260,6 +256,20 @@ public class UserAPI {
     @GetMapping("/check-token")
     public ResponseResult parseToken() {
         return userService.parseToken();
+    }
+
+    /**
+     * 检查邮箱验证码是否正确
+     * @param email
+     * @param emailCode
+     * @param captchaCode
+     * @return
+     */
+    @GetMapping("check-email-code")
+    public ResponseResult checkEmailCode(@RequestParam("email") String email,
+                                         @RequestParam("emailCode") String emailCode,
+                                         @RequestParam("captchaCode") String captchaCode) {
+        return  userService.checkEmailCode(email,emailCode,captchaCode);
     }
 
     /**

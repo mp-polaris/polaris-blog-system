@@ -6,7 +6,7 @@ import javax.servlet.http.HttpServletResponse;
 
 public class CookieUtil {
     private static final int DEFAULT_AGE = Constants.TimeValue.YEAR;
-    private static final String DOMAIN = "localhost";
+    private static final String DOMAIN = "mpolaris.top";
 
     /**
      * 添加cookie值

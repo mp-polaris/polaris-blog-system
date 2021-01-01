@@ -36,7 +36,7 @@ public class ArticleAdminAPI {
     @PreAuthorize("@permission.admin()")
     @GetMapping("/{articleId}")
     public ResponseResult getArticle(@PathVariable("articleId")String articleId){
-        return articleService.getArticle(articleId);
+        return articleService.getArticleForAdmin(articleId);
     }
 
     /**

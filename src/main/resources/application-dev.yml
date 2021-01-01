@@ -11,7 +11,7 @@ spring:
       max-file-size: 50MB
   datasource:
     username: root
-    password:
+    password: 1234321
     url: jdbc:mysql://mpolaris.top:3306/mpolaris_blog_system?characterEncoding=utf-8&useSSL=false
     driver-class-name: com.mysql.cj.jdbc.Driver
     initialization-mode: always
@@ -34,7 +34,7 @@ spring:
   redis:
     host: mpolaris.top
     port: 6379
-    password:
+    password: 1234321
   data:
     solr:
       host: http://mpolaris.top:8983/solr/mpolaris_blog_system_core

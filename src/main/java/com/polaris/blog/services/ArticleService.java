@@ -27,4 +27,6 @@ public interface ArticleService {
     ResponseResult getLabelList(int size);
 
     ResponseResult getArticleCount();
+
+    ResponseResult getArticleForAdmin(String articleId);
 }

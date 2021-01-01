@@ -18,6 +18,7 @@ import com.wf.captcha.GifCaptcha;
 import com.wf.captcha.SpecCaptcha;
 import com.wf.captcha.base.Captcha;
 import io.jsonwebtoken.Claims;
+import javafx.scene.text.Text;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -104,10 +105,16 @@ public class UserServiceImpl extends BaseService implements UserService {
      * captchaKey:时间戳
      */
     @Override
-    public void createCaptcha(String captchaKey) {
+    public void createCaptcha() {
         try {
-            if (TextUtil.isEmpty(captchaKey) || captchaKey.length() < 13) return;
-            long key = Long.parseLong(captchaKey);
+            //生成captchaKey，为了防止重复创建占用redis资源，先检查Cookie中是否有上一次的id，如果有就重复利用
+            String lastId = CookieUtil.getCookie(getRequest(), Constants.User.LAST_CAPTCHA_ID);
+            String key;
+            if(TextUtil.isEmpty(lastId)) {
+                key = snowflakeIdWorker.nextId() + "";
+            } else {
+                key = lastId;
+            }
             // 设置请求头为输出图片类型
             this.getResponse().setContentType("image/gif");
             this.getResponse().setHeader("Pragma", "No-cache");
@@ -140,6 +147,8 @@ public class UserServiceImpl extends BaseService implements UserService {
             // 拿到验证码内容且英文转换为小写
             String content = targetCaptcha.text().toLowerCase();
 
+            //将captchaKey写入Cookie用于后面检查
+            CookieUtil.setUpCookie(getResponse(),Constants.User.LAST_CAPTCHA_ID,key);
             // 验证码存入redis
             // 删除时机：
             //      1.自然过期（10分钟后自己删除）
@@ -216,7 +225,7 @@ public class UserServiceImpl extends BaseService implements UserService {
     }
 
     @Override
-    public ResponseResult register(BlogUser blogUser, String emailCode, String captchaCode, String captchaKey) {
+    public ResponseResult register(BlogUser blogUser, String emailCode, String captchaCode) {
         //1.检查是否可以注册
         // 检查当前用户名是否已注册
         if (TextUtil.isEmpty(blogUser.getUserName())) {
@@ -249,6 +258,11 @@ public class UserServiceImpl extends BaseService implements UserService {
         } else {
             redisUtil.del(Constants.User.KEY_EMAIL_CONTENT + blogUser.getEmail());
         }
+        //从Cookie里拿captchaKey
+        String captchaKey = CookieUtil.getCookie(getRequest(),Constants.User.LAST_CAPTCHA_ID);
+        if (TextUtil.isEmpty(captchaKey)) {
+            return ResponseResult.FAILED("请允许保留Cookie信息！");
+        }
         //检查图灵验证码是否正确
         String captchaVerifyCode = (String) redisUtil.get(Constants.User.KEY_CAPTCHA_CONTENT
                 + captchaKey);
@@ -276,16 +290,22 @@ public class UserServiceImpl extends BaseService implements UserService {
         blogUser.setRoles(Constants.User.ROLE_NORMAL);
         //4.保存到数据库中
         userMapper.insert(blogUser);
+        CookieUtil.deleteCookie(getResponse(),Constants.User.LAST_CAPTCHA_ID);
         //5.返回结果
         return ResponseResult.GET(ResponseState.REGISTER_SUCCESS);
     }
 
     @Override
-    public ResponseResult doLogin(String captchaKey, String captcha, BlogUser blogUser, String from) {
+    public ResponseResult doLogin(String captcha, BlogUser blogUser, String from) {
         //from可能为空,设置默认值
         if (TextUtil.isEmpty(from) ||
                 (!Constants.FROM_MOBILE.equals(from) && !Constants.FROM_PC.equals(from))) {
             from = Constants.FROM_MOBILE;
+        }
+        //从Cookie里拿captchaKey
+        String captchaKey = CookieUtil.getCookie(getRequest(),Constants.User.LAST_CAPTCHA_ID);
+        if (TextUtil.isEmpty(captchaKey)) {
+            return ResponseResult.FAILED("请允许保留Cookie信息！");
         }
         //1.校验图灵验证码
         String captchaValue = (String) redisUtil.get(Constants.User.KEY_CAPTCHA_CONTENT + captchaKey);
@@ -321,6 +341,7 @@ public class UserServiceImpl extends BaseService implements UserService {
         userByDB.setUpdateTime(new Date());
         //6.生成token
         createToken(userByDB, from);
+        CookieUtil.deleteCookie(getResponse(),Constants.User.LAST_CAPTCHA_ID);
         return ResponseResult.SUCCESS("登录成功");
     }
 
@@ -486,6 +507,8 @@ public class UserServiceImpl extends BaseService implements UserService {
         userMap.put("avatar", blogUser.getAvatar());
         userMap.put("state", blogUser.getState());
         userMap.put("sign", blogUser.getSign());
+        userMap.put("updateTime",blogUser.getUpdateTime());
+        userMap.put("createTime",blogUser.getCreateTime());
         return ResponseResult.SUCCESS("查询成功").setData(userMap);
     }
 
@@ -658,29 +681,32 @@ public class UserServiceImpl extends BaseService implements UserService {
     public ResponseResult getPcLoginQrCode() {
         //尝试取出上一次的qrCode
         String lastQrCode = CookieUtil.getCookie(getRequest(), Constants.User.LAST_REQUEST_LOGIN_ID);
+        long code;
         if (!TextUtil.isEmpty(lastQrCode)) {
-            //先把redis里的删除
-            redisUtil.del(Constants.User.KEY_PC_LOGIN_ID + lastQrCode);
-            //检查上一次的请求时间，如果太频繁，则直接返回
-            Object lastGetTime = redisUtil.get(Constants.User.LAST_REQUEST_LOGIN_ID + lastQrCode);
-            if (lastGetTime != null) {
-                return ResponseResult.FAILED("服务器繁忙，请稍后处理");
-            }
+//            //先把redis里的删除
+//            redisUtil.del(Constants.User.KEY_PC_LOGIN_ID + lastQrCode);
+//            //检查上一次的请求时间，如果太频繁，则直接返回
+//            Object lastGetTime = redisUtil.get(Constants.User.LAST_REQUEST_LOGIN_ID + lastQrCode);
+//            if (lastGetTime != null) {
+//                return ResponseResult.FAILED("服务器繁忙，请稍后处理");
+//            }
+            code = Long.parseLong(lastQrCode);
+        } else {
+            //生成一个唯一id
+            code = snowflakeIdWorker.nextId();
         }
-        //1.生成一个唯一id
-        long code = snowflakeIdWorker.nextId();
         //2.保存到redis里，值为false，有效期为5分钟
         redisUtil.set(Constants.User.KEY_PC_LOGIN_ID + code,
                 Constants.User.KEY_PC_LOGIN_STATE_FALSE, Constants.TimeValue.MIN_5);
         //3.返回结果
         Map<String, Object> result = new HashMap<>();
         String originalDomain = TextUtil.getDomain(this.getRequest());
-        result.put("code", code);
-        result.put("url", originalDomain + "/portal/image/qr-code/" + code);
+        result.put("code", String.valueOf(code));
+        result.put("url", originalDomain + "/portal/image/qr-code/" + String.valueOf(code));
         CookieUtil.setUpCookie(this.getResponse(), Constants.User.LAST_REQUEST_LOGIN_ID, String.valueOf(code));
-        //防止频繁请求
-        redisUtil.set(Constants.User.LAST_REQUEST_LOGIN_ID + String.valueOf(code),
-                "true", Constants.TimeValue.SECOND_10);
+//        //防止频繁请求
+//        redisUtil.set(Constants.User.LAST_REQUEST_LOGIN_ID + String.valueOf(code),
+//                "true", Constants.TimeValue.SECOND_10);
         return ResponseResult.SUCCESS("获取成功").setData(result);
     }
 
@@ -749,6 +775,7 @@ public class UserServiceImpl extends BaseService implements UserService {
             BlogUser userFromDB = MapperUtil.getMapper(BlogUserMapper.class).selectByPrimaryKey(loginState);
             if (userFromDB == null) return ResponseResult.QR_CODE_DEPRECATE();
             createToken(userFromDB, Constants.FROM_PC);
+            CookieUtil.deleteCookie(getResponse(),Constants.User.LAST_REQUEST_LOGIN_ID);
             //登录成功
             return ResponseResult.LOGIN_SUCCESS();
         }
@@ -787,6 +814,23 @@ public class UserServiceImpl extends BaseService implements UserService {
         String encode = passwordEncoder.encode(password);
         int i = blogUserMapper.updatePasswordByUserId(userId, encode);
         return i == 1 ? ResponseResult.SUCCESS("密码重置成功") : ResponseResult.FAILED("密码重置失败！");
+    }
+
+    @Override
+    public ResponseResult checkEmailCode(String email, String emailCode, String captchaCode) {
+        //检查人类验证码
+        String captchaId = CookieUtil.getCookie(getRequest(), Constants.User.LAST_CAPTCHA_ID);
+        String captcha = (String)redisUtil.get(Constants.User.KEY_CAPTCHA_CONTENT + captchaId);
+        if(!captchaCode.equals(captcha)) {
+            return ResponseResult.FAILED("人类验证码不正确！");
+        }
+        //检查邮箱验证码
+        String redisVerifyCode = (String) redisUtil.get(Constants.User.KEY_EMAIL_CONTENT + email);
+        if(!emailCode.equals(redisVerifyCode)) {
+            return ResponseResult.FAILED("邮箱验证码不正确！");
+        }
+        //返回结果
+        return ResponseResult.SUCCESS("邮箱验证码输入正确！");
     }
 
     public ResponseResult registerCount() {

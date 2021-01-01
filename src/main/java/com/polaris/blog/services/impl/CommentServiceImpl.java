@@ -81,21 +81,21 @@ public class CommentServiceImpl extends BaseService implements CommentService {
         List<Comment> comments = null;
         PageHelper.startPage(page,size,"state DESC,create_time DESC");
 
-        //先从缓存中获取
-        String cacheJson = (String) redisUtil.get(Constants.Comment.KEY_COMMENT_FIRST_PAGE_CACHE + articleId);
-        if (!TextUtil.isEmpty(cacheJson) && page == 1) {
-            comments = gson.fromJson(cacheJson,new TypeToken<List<Comment>>(){
-            }.getType());
-            log.info("comment list from redis...");
-        } else {
+//        //先从缓存中获取
+//        String cacheJson = (String) redisUtil.get(Constants.Comment.KEY_COMMENT_FIRST_PAGE_CACHE + articleId);
+//        if (!TextUtil.isEmpty(cacheJson) && page == 1) {
+//            comments = gson.fromJson(cacheJson,new TypeToken<List<Comment>>(){
+//            }.getType());
+//            log.info("comment list from redis...");
+//        } else {
             comments = MapperUtil.getMapper(CommentMapper.class).selectAllByArticleId(articleId);
-        }
+//        }
 
         PageInfo<Comment> pageInfo = new PageInfo<>(comments);
         //如果是第一页就保存一份到缓存
-        if(page == 1) {
+//        if(page == 1) {
             redisUtil.set(Constants.Comment.KEY_COMMENT_FIRST_PAGE_CACHE + articleId, gson.toJson(comments),Constants.TimeValue.HOUR);
-        }
+//        }
         return ResponseResult.SUCCESS("评论列表获取成功").setData(pageInfo);
     }
 
@@ -103,6 +103,7 @@ public class CommentServiceImpl extends BaseService implements CommentService {
     public ResponseResult getCommentList(int page, int size) {
         page = checkPage(page);
         size = checkSize(size);
+
         PageHelper.startPage(page,size,"state DESC,create_time DESC");
         List<Comment> comments = MapperUtil.getMapper(CommentMapper.class).selectAll();
         PageInfo<Comment> pageInfo = new PageInfo<>(comments);
